@@ -19,9 +19,12 @@ electron-builder.env
 /.task/
 /docs-archive/
 .idea/
-# Local Claude Code state; committed project skills live under .claude/skills
+# Local Claude Code state; committed project skills, agents and hooks live under .claude/skills,
+# .claude/agents and .claude/settings.json. agent-approvals.json and agent-log.jsonl stay local.
 /.claude/*
 !/.claude/skills/
+!/.claude/agents/
+!/.claude/settings.json
 
 # Local build artifacts dropped in the repo root
 /*.dmg
