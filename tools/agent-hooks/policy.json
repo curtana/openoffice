@@ -1,0 +1,17 @@
+{
+  "repo": "curtana/openoffice",
+  "upstreamRepos": ["pblsketch/openoffice", "genspark-ai/genoffice"],
+  "enginePaths": [
+    "packages/docx-engine/",
+    "packages/odt-engine/",
+    "packages/pptx-engine/",
+    "packages/pptx-ops/",
+    "packages/pptx-render/",
+    "packages/xlsx-gateway/",
+    "packages/pdf2docx/",
+    "packages/html2docx/",
+    "packages/xmind-engine/",
+    "apps/sheets/native/xlsx-engine/"
+  ],
+  "protectedBranches": ["main", "develop"]
+}
