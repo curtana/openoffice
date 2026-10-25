@@ -243,6 +243,29 @@ describe('agent hook guard: branches', () => {
     expect(denied(bash('ieum-pm', 'git push origin main'))).toBeNull()
   })
 
+  it('a pull request into main is merged only by ieum-release for an approved head', () => {
+    const merge = 'gh pr merge 2 --repo curtana/openoffice --merge'
+    ghReplies({ baseRefName: 'main', headRefOid: 'abcdef1234567890' })
+    expect(denied(bash('ieum-developer', merge))).toMatch(/Only ieum-release merges into main/)
+    expect(denied(bash('ieum-release', merge))).toMatch(/approve\.mjs main-merge abcdef123456/)
+    writeFile(
+      '.claude/agent-approvals.json',
+      JSON.stringify({ mainMerge: [{ commit: 'abcdef123456' }] }),
+    )
+    expect(denied(bash('ieum-release', merge))).toBeNull()
+    expect(denied(bash('ieum-release', `${merge} --auto`))).toMatch(/Auto-merge/)
+    expect(
+      denied(bash('ieum-release', 'gh api -X PUT repos/curtana/openoffice/pulls/2/merge')),
+    ).toMatch(/gh pr merge, not gh api/)
+  })
+
+  it('a pull request into develop is merged only by the dev lead', () => {
+    ghReplies({ baseRefName: 'develop', headRefOid: 'abc' })
+    const merge = 'gh pr merge 3 --repo curtana/openoffice --merge'
+    expect(denied(bash('ieum-dev-worker', merge))).toMatch(/Only the dev lead merges into develop/)
+    expect(denied(bash('ieum-developer', merge))).toBeNull()
+  })
+
   it('a feature branch enters develop only with qa:approved', () => {
     git('switch', '-q', '-c', 'develop')
     git('branch', 'feature/7-split-save')

@@ -320,7 +320,7 @@ function writeRule(team, path) {
   return null
 }
 
-function denyGh(cmd) {
+function denyGh(cmd, team) {
   const w = cmd.words
   if (w[0] !== 'gh') return null
   const sub = w[1]
@@ -346,6 +346,8 @@ function denyGh(cmd) {
       w.some((x) => /^(-X|--method)$/.test(x))
     )
       return "Releases and workflow runs are a person's job."
+    if (/\/pulls\/\d+\/merge\b/.test(path))
+      return 'Merge pull requests with gh pr merge, not gh api.'
     return null
   }
   const pinned =
@@ -353,6 +355,31 @@ function denyGh(cmd) {
     w.includes(`--repo=${POLICY.repo}`)
   if (!pinned)
     return `Add --repo ${POLICY.repo} to every gh command: this is a fork and gh may otherwise pick the upstream repository.`
+  if (sub === 'pr' && w[2] === 'merge') return denyPrMerge(w, team)
+  return null
+}
+
+/** A pull request into main is merged only by ieum-release, for a head commit the user approved. */
+function denyPrMerge(w, team) {
+  const pr = w.slice(3).find((x) => /^\d+$/.test(x))
+  if (!pr) return 'Name the pull request number: gh pr merge <number> --repo …'
+  if (w.includes('--auto')) return 'Auto-merge is set by a person.'
+  let info
+  try {
+    info = ghJson(['pr', 'view', pr, '--json', 'baseRefName,headRefOid'])
+  } catch {
+    return `Could not read pull request #${pr}; merging it needs its base and head checked.`
+  }
+  if (info.baseRefName !== 'main') {
+    if (POLICY.protectedBranches.includes(info.baseRefName) && team !== 'ieum-developer')
+      return `Only the dev lead merges into ${info.baseRefName}.`
+    return null
+  }
+  if (team !== 'ieum-release')
+    return 'Only ieum-release merges into main, when ieum-pm asks after the user approves.'
+  const sha = String(info.headRefOid)
+  if (!(readApprovals().mainMerge ?? []).some((a) => a.commit && sha.startsWith(a.commit)))
+    return `Merging #${pr} (${sha.slice(0, 12)}) into main needs the user's approval: node tools/agent-team/approve.mjs main-merge ${sha.slice(0, 12)}. Ask ieum-pm.`
   return null
 }
 
@@ -514,7 +541,7 @@ export function denyBash(team, command, cwd) {
     }
     if (/ieumoffice-site/.test(text) && /\b(push|commit)\b/.test(text))
       return 'The site repository is published by a person (releasing.ko.md 13).'
-    const gh = denyGh(cmd)
+    const gh = denyGh(cmd, team)
     if (gh) return gh
     if (team === 'ieum-qa') {
       const shell = qaShellRule(cmd)
