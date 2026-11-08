@@ -280,8 +280,13 @@ describe('mcp server', () => {
     }
     const bytes = JSON.stringify(list).length
     // 90 KiB before the four PDF document tools (pdf_images, pdf_ai_read, pdf_translate, pdf_status)
-    // and hwp_read (about 1 KiB) joined the catalog
-    expect(bytes).toBeLessThanOrEqual(97 * 1024)
+    // and hwp_read (about 1 KiB) joined the catalog; 97 KiB before epub_translate and epub_status
+    // (about 2 KiB); 99 KiB before hwp_apply with its typed ops and create_hwp (about 12 KiB,
+    // decision 0079); 112 KiB before the slide highlight, character spacing, hide and rename ops
+    // (about 0.5 KiB, decision 0094); 113 KiB before diagram_read, diagram_apply with its typed
+    // ops and create_drawio (about 5.5 KiB); 119 KiB before the HWP note settings, page setup,
+    // list, read_formatting and format_look ops (about 1.8 KiB, decision 0106)
+    expect(bytes).toBeLessThanOrEqual(121 * 1024)
     expect(bytes).toBeGreaterThan(60 * 1024)
   })
 
@@ -360,8 +365,10 @@ describe('mcp server', () => {
       >
       expect(props.ops!.anyOf!.map((v) => v.type)).toEqual(['array', 'object'])
       expect(props.ops!.items).toBeUndefined()
-      // 40 KiB before the four PDF document tools, then hwp_read and read_url (about 1.5 KiB) joined
-      expect(JSON.stringify(tools).length).toBeLessThan(44 * 1024)
+      // 42 KiB before hwp_read (about 1 KiB) joined the catalog; 43 KiB before epub_translate and
+      // epub_status (about 2 KiB); 45 KiB before hwp_apply and create_hwp (about 2.5 KiB); 48 KiB
+      // before diagram_read, diagram_apply and create_drawio (about 3 KiB)
+      expect(JSON.stringify(tools).length).toBeLessThan(51 * 1024)
     } finally {
       await client2.close()
       disposeContext(ctx2)
